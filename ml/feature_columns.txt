@@ -1,0 +1,10 @@
+domain_age_days
+ssl_valid
+ssl_days_remaining
+url_length
+num_special_chars
+has_ip
+num_subdomains
+contains_keyword
+using_shortener
+tld_rank
