@@ -5,7 +5,6 @@ import whois
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 import tldextract
-from django.core.cache import cache
 
 def extract_features(url):
     """Main function: returns dict of all features"""
@@ -68,32 +67,42 @@ def tld_rank_map(tld):
     return common_tlds.get(tld, 0)
 
 def extract_domain_age(url):
-        parsed = urlparse(url)
-        domain = parsed.netloc or parsed.path.split('/')[0]
-        domain = domain.split(':')[0]
-        
-        # Try cache first
+    # Try to import cache only if Django is available
+    try:
+        from django.core.cache import cache
+        cache_available = True
+    except (ImportError, RuntimeError):
+        cache_available = False
+
+    parsed = urlparse(url)
+    domain = parsed.netloc or parsed.path.split('/')[0]
+    domain = domain.split(':')[0]
+
+    # Check cache if available
+    if cache_available:
         cache_key = f"whois_age_{domain}"
         cached_age = cache.get(cache_key)
         if cached_age is not None:
             return {'domain_age_days': cached_age}
-        # If not cached, perform WHOIS
-        try:
-            w = whois.whois(domain)
-            if w.creation_date:
-                creation = w.creation_date[0] if isinstance(w.creation_date, list) else w.creation_date
-                if isinstance(creation, datetime):
-                    age_days = (datetime.now(timezone.utc) - creation).days
-                else:
-                    age_days =  (datetime.now(timezone.utc) - datetime.combine(creation, datetime.min.time())).days
+
+    # WHOIS lookup
+    try:
+        w = whois.whois(domain)
+        if w.creation_date:
+            creation = w.creation_date[0] if isinstance(w.creation_date, list) else w.creation_date
+            if isinstance(creation, datetime):
+                age_days = (datetime.now(timezone.utc) - creation).days
             else:
-                age_days = -1
-        except Exception:
+                age_days = (datetime.now(timezone.utc) - datetime.combine(creation, datetime.min.time())).days
+        else:
             age_days = -1
-        
-        # Store in cache for 24 hours (86400 seconds)
+    except Exception:
+        age_days = -1
+
+    # Store in cache if available
+    if cache_available:
         cache.set(cache_key, age_days, 86400)
-        return {'domain_age_days': age_days}
+    return {'domain_age_days': age_days}
 
 
 def extract_ssl_info(url):
