@@ -40,7 +40,7 @@ def extract_url_patterns(url):
     num_subdomains = len(subdomain.split('.')) if subdomain else 0
     
     # Contains suspicious keywords
-    suspicious_keywords = ['login', 'verify', 'account', 'secure', 'signin', 'bank', 'paypal', 'confirm']
+    suspicious_keywords = ['login', 'verify', 'account', 'secure', 'signin', 'confirm', 'update', 'validate', 'authenticate', 'authorize']
     contains_keyword = any(keyword in url.lower() for keyword in suspicious_keywords)
     
     # Using URL shortener (common domains)
